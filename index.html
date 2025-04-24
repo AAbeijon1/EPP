@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Detección y Seguimiento de Objetos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .drop-zone:hover {
+            background: #f8f9fa;
+        }
+        .drop-zone.active {
+            border-color: #0d6efd;
+            background: #e9ecef;
+        }
+        .detection-card {
+            margin-bottom: 15px;
+        }
+        .detection-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .chart-container {
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .video-container {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        .video-container video {
+            max-width: 100%;
+        }
+        .track-id-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        /* Estilos para la imagen de carga */
+        .loading-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            height: 200px;
+            width: 100%;
+            border-radius: 5px;
+        }
+        /* Mejorar la visualización de las imágenes */
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+        /* Estilos para la barra de progreso */
+        .progress {
+            height: 25px;
+            margin-bottom: 15px;
+        }
+        .progress-bar {
+            font-size: 14px;
+            line-height: 25px;
+        }
+        /* Estilos para los filtros de clase */
+        .class-filters {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .class-checkbox {
+            margin-right: 15px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        /* Estilo para las alertas de seguridad */
+        .safety-alert {
+            background-color: #ffecb5;
+            border-left: 4px solid #e6a700;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+        }
+        .safety-critical {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        /* Estilo para el contador de infracciones */
+        .violation-counter {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        /* Estilo para el video procesado */
+        .processed-video {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .image-popup {
+            display: block;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 2px;
+            transition: transform 0.2s;
+        }
+        .image-popup:hover {
+            transform: scale(1.05);
+            border-color: #007bff;
+        }
+        /* Estilo para las clases de alerta */
+        .alert-class-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+        }
+        .alert-class-item.selected {
+            background-color: #e2f0ff;
+            border-left-color: #0d6efd;
+        }
+        .alert-class-item:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+        .alert-evidence-container {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .alert-evidence-image {
+            height: 120px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            transition: transform 0.2s;
+        }
+        .alert-evidence-image:hover {
+            transform: scale(1.05);
+            border-color: #0d6efd;
+        }
+        /* Estilo para botones de acción de video */
+        .video-actions {
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+        /* Estilo para mensajes de error de video */
+        .video-error {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 5px;
+            display: none;
+        }
+        /* Estilos para la pestaña de trayectorias */
+        .trajectory-container {
+            margin-top: 20px;
+        }
+        .trajectory-card {
+            margin-bottom: 20px;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .trajectory-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .trajectory-card.selected {
+            border: 2px solid #0d6efd;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+        }
+        .trajectory-sequence {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 15px 0;
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            scrollbar-width: thin;
+        }
+        .trajectory-sequence::-webkit-scrollbar {
+            height: 8px;
+        }
+        .trajectory-sequence::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .trajectory-sequence::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .trajectory-sequence::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .trajectory-image {
+            min-width: 180px;
+            height: 180px;
+            margin-right: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            object-fit: cover;
+            transition: transform 0.2s;
+        }
+        .trajectory-image:hover {
+            transform: scale(1.05);
+            border-color: #0d6efd;
+        }
+        .trajectory-timeline {
+            position: relative;
+            height: 40px;
+            margin: 20px 0;
+            background-color: #e9ecef;
+            border-radius: 20px;
+        }
+        .timeline-marker {
+            position: absolute;
+            top: 5px;
+            width: 30px;
+            height: 30px;
+            background-color: #0d6efd;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .timeline-marker:hover {
+            background-color: #0b5ed7;
+        }
+        .trajectory-info {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .trajectory-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .trajectory-video-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .trajectory-video {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 5px;
+        }
+        .no-trajectory-message {
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .trajectory-frame-info {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Sistema de Detección y Seguimiento de Objetos</h1>
+        
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="detection-tab" data-bs-toggle="tab" data-bs-target="#detection" type="button" role="tab" aria-controls="detection" aria-selected="true">Detección</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" aria-controls="video" aria-selected="false">Video Procesado</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="false">Tablero</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab" aria-controls="gallery" aria-selected="false">Galería</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="safety-tab" data-bs-toggle="tab" data-bs-target="#safety" type="button" role="tab" aria-controls="safety" aria-selected="false">Informe de Detecciones y Alertas</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="trajectories-tab" data-bs-toggle="tab" data-bs-target="#trajectories" type="button" role="tab" aria-controls="trajectories" aria-selected="false">Trayectorias</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="forensic-tab" data-bs-toggle="tab" data-bs-target="#forensic" type="button" role="tab" aria-controls="forensic" aria-selected="false">Módulo Forense</button>
+            </li>
+        </ul>
+        <div class="tab-pane fade" id="forensic" role="tabpanel" aria-labelledby="forensic-tab">
+            <div class="card mb-4">
+                <div class="card-header">Investigación Forense de Objetos</div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Filtrado por Color y Tiempo</h5>
+                            <p class="text-muted">Busque objetos por color, rango de fechas y horas específicas.</p>
+                            
+                            <div class="mb-3">
+                                <label for="color-picker" class="form-label">Color del Objeto</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="color-picker" value="#ff0000" title="Elija un color">
+                                    <span class="input-group-text" id="color-hex">#ff0000</span>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="start-date" class="form-label">Fecha Inicio</label>
+                                    <input type="date" class="form-control" id="start-date">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="end-date" class="form-label">Fecha Fin</label>
+                                    <input type="date" class="form-control" id="end-date">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="time-range" class="form-label">Rango de Horas</label>
+                                <div class="input-group">
+                                    <input type="time" class="form-control" id="start-time" value="00:00">
+                                    <span class="input-group-text">a</span>
+                                    <input type="time" class="form-control" id="end-time" value="23:59">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Tamaño del Objeto</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Min</span>
+                                    <input type="number" class="form-control" id="size-min" placeholder="Mínimo">
+                                    <span class="input-group-text">Max</span>
+                                    <input type="number" class="form-control" id="size-max" placeholder="Máximo">
+                                </div>
+                                <div class="form-text">Tamaño en píxeles cuadrados</div>
+                            </div>
+                            
+                            <button id="forensic-search-btn" class="btn btn-primary">Buscar</button>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">Distribución de Colores</div>
+                                <div class="card-body">
+                                    <canvas id="color-chart" height="250"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>Resultados de Búsqueda</h5>
+                        <div id="forensic-results-count"></div>
+                        <div class="row" id="forensic-gallery-container">
+                            <!-- Los resultados se mostrarán aquí -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">Línea de Tiempo de Detecciones</div>
+                <div class="card-body">
+                    <canvas id="timeline-chart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="tab-content" id="myTabContent">
+            <!-- Pestaña de Detección -->
+            <div class="tab-pane fade show active" id="detection" role="tabpanel" aria-labelledby="detection-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">Cargar Modelo YOLOv8</div>
+                            <div class="card-body">
+                                <div id="model-drop-zone" class="drop-zone mb-3">
+                                    <p>Arrastra y suelta tu archivo de modelo YOLOv8 (.pt) aquí o haz clic para seleccionar</p>
+                                    <input type="file" id="model-upload" accept=".pt" style="display: none;">
+                                </div>
+                                <div id="model-info" class="alert alert-info d-none">
+                                    <span id="model-name"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card mb-4">
+                            <div class="card-header">Cargar Video</div>
+                            <div class="card-body">
+                                <div id="drop-zone" class="drop-zone mb-3">
+                                    <p>Arrastra y suelta un archivo de video aquí o haz clic para seleccionar</p>
+                                    <input type="file" id="video-upload" accept="video/*" style="display: none;">
+                                </div>
+                                <div id="upload-info" class="alert alert-info d-none">
+                                    <span id="file-name"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">Configuración de Detección</div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="threshold" class="form-label">Umbral de Confianza: <span id="threshold-value">0.50</span></label>
+                                    <input type="range" class="form-range" id="threshold" min="0.1" max="0.9" step="0.1" value="0.5">
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="show-tracks" checked>
+                                    <label class="form-check-label" for="show-tracks">
+                                        Mostrar IDs de Seguimiento y Trayectorias
+                                    </label>
+                                </div>
+                                <button id="detect-btn" class="btn btn-primary" disabled>Detectar con Seguimiento</button>
+                                
+                                <!-- Video procesado (ubicado aquí según la flecha) -->
+                                <div id="video-preview-container" class="mt-3 d-none">
+                                    <h6>Video Procesado:</h6>
+                                    <div class="video-error" id="preview-video-error">
+                                        Error al cargar el video. Intente verlo en la pestaña "Video Procesado".
+                                    </div>
+                                    <video id="preview-video" class="processed-video" controls style="width: 100%; max-height: 250px; border: 2px solid #007bff;"></video>
+                                    <div class="video-actions">
+                                        <button id="view-full-video-btn" class="btn btn-sm btn-outline-primary">Ver en pantalla completa</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Barra de progreso para el procesamiento -->
+                <div id="progress-container" class="d-none">
+                    <div class="progress">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                            0%
+                        </div>
+                    </div>
+                    <p id="progress-status">Inicializando...</p>
+                </div>
+                
+                <!-- Filtros de clase -->
+                <div id="class-filters-container" class="class-filters d-none">
+                    <h5>Filtrar por Tipo de Objeto:</h5>
+                    <div id="class-checkboxes">
+                        <!-- Los checkboxes se generarán dinámicamente -->
+                    </div>
+                    <button id="apply-filters-btn" class="btn btn-sm btn-outline-primary mt-2">Aplicar Filtros</button>
+                    <button id="clear-filters-btn" class="btn btn-sm btn-outline-secondary mt-2 ms-2">Limpiar Filtros</button>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">Resultados de Detección</div>
+                    <div class="card-body">
+                        <div id="results-container">
+                            <p>No hay detecciones aún. Carga un modelo y un video, luego haz clic en "Detectar con Seguimiento".</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pestaña de Video Procesado -->
+            <div class="tab-pane fade" id="video" role="tabpanel" aria-labelledby="video-tab">
+                <div class="card mb-4">
+                    <div class="card-header">Video Procesado con Detecciones</div>
+                    <div class="card-body">
+                        <div id="full-video-container" class="text-center">
+                            <p id="video-status-message">No hay video procesado disponible. Ejecuta la detección primero.</p>
+                            <div class="video-error" id="full-video-error">
+                                Error al cargar el video. Intente recargar la página o ejecutar la detección nuevamente.
+                            </div>
+                            <div class="video-actions mb-3">
+                                <button id="reload-video-btn" class="btn btn-outline-primary">Recargar Video</button>
+                                <button id="download-video-btn" class="btn btn-outline-success ms-2">Descargar Video</button>
+                            </div>
+                            <video id="full-preview-video" class="img-fluid" controls style="max-height: 70vh; border: 1px solid #ddd; border-radius: 5px;"></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pestaña de Tablero -->
+            <div class="tab-pane fade" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">Distribución de Clases</div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="class-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">Confianza Promedio por Clase</div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="confidence-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">Detecciones a lo Largo del Tiempo</div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="time-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">Distribución de IDs de Seguimiento</div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="track-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pestaña de Galería -->
+            <div class="tab-pane fade" id="gallery" role="tabpanel" aria-labelledby="gallery-tab">
+                <div class="card mb-4">
+                    <div class="card-header">Buscar Detecciones</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="input-group mb-3">
+                                    <input type="text" id="search-input" class="form-control" placeholder="Buscar por clase (ej. casco, chaleco)">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group mb-3">
+                                    <input type="number" id="track-id-input" class="form-control" placeholder="Filtrar por ID de Seguimiento">
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <button class="btn btn-outline-secondary" type="button" id="search-btn">Buscar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row" id="gallery-container">
+                    <!-- Las tarjetas de detección se añadirán aquí -->
+                </div>
+            </div>
+            
+            <!-- Pestaña de Informe de Seguridad -->
+            <div class="tab-pane fade" id="safety" role="tabpanel" aria-labelledby="safety-tab">
+                <div class="card mb-4">
+                    <div class="card-header">Informe de Detecciones y Alertas</div>
+                    <div class="card-body">
+                        <div class="violation-counter mb-3">
+                            Total de Alertas Configuradas: <span id="violation-count">0</span>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5>Resumen de Detecciones:</h5>
+                                <div id="compliance-summary" class="mb-4">
+                                    <p>No hay datos disponibles. Ejecuta la detección primero.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Configuración de Alertas:</h5>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p>Selecciona las clases que deseas monitorear con alertas:</p>
+                                        <div id="alert-classes-container">
+                                            <!-- Las clases para alertar se generarán dinámicamente -->
+                                            <p>No hay clases disponibles. Ejecuta la detección primero.</p>
+                                        </div>
+                                        <button id="apply-alerts-btn" class="btn btn-sm btn-primary mt-2">Aplicar Configuración</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5>Alertas Configuradas:</h5>
+                        <div id="safety-alerts">
+                            <!-- Las alertas de seguridad se añadirán aquí -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Nueva Pestaña de Trayectorias -->
+            <div class="tab-pane fade" id="trajectories" role="tabpanel" aria-labelledby="trajectories-tab">
+                <div class="card mb-4">
+                    <div class="card-header">Trayectorias de Objetos Detectados</div>
+                    <div class="card-body">
+                        <p class="mb-4">Selecciona un objeto para visualizar su trayectoria a lo largo del video:</p>
+                        
+                        <!-- Filtros para trayectorias -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">Filtrar por Clase</span>
+                                    <select id="trajectory-class-filter" class="form-select">
+                                        <option value="">Todas las clases</option>
+                                        <!-- Las opciones se generarán dinámicamente -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">Ordenar por</span>
+                                    <select id="trajectory-sort" class="form-select">
+                                        <option value="id">ID de Seguimiento</option>
+                                        <option value="class">Clase</option>
+                                        <option value="frames">Número de Frames</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contenedor de objetos con trayectorias -->
+                        <div id="trajectory-objects-container" class="row">
+                            <div class="col-12">
+                                <div class="no-trajectory-message">
+                                    <h5>No hay datos de trayectorias disponibles</h5>
+                                    <p>Ejecuta la detección con seguimiento primero para visualizar las trayectorias de los objetos.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Visualización de trayectoria seleccionada -->
+                <div id="trajectory-detail-container" class="card mb-4 d-none">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span id="trajectory-detail-title">Trayectoria del Objeto</span>
+                            <button id="close-trajectory-btn" class="btn btn-sm btn-outline-secondary">Cerrar</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Información de la trayectoria -->
+                        <div class="trajectory-info">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <p><strong>Clase:</strong> <span id="trajectory-class"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p><strong>ID de Seguimiento:</strong> <span id="trajectory-id"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p><strong>Frames:</strong> <span id="trajectory-frames"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Controles de visualización -->
+                        <div class="trajectory-controls">
+                            <button id="play-trajectory-btn" class="btn btn-primary">
+                                <i class="bi bi-play-fill"></i> Reproducir Secuencia
+                            </button>
+                            <div>
+                                <button id="export-trajectory-btn" class="btn btn-outline-success">
+                                    <i class="bi bi-download"></i> Exportar Trayectoria
+                                </button>
+                                <button id="create-trajectory-video-btn" class="btn btn-outline-primary ms-2">
+                                    <i class="bi bi-film"></i> Crear Video
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Línea de tiempo -->
+                        <div class="trajectory-timeline" id="trajectory-timeline">
+                            <!-- Los marcadores se generarán dinámicamente -->
+                        </div>
+                        
+                        <!-- Secuencia de imágenes -->
+                        <div class="trajectory-sequence" id="trajectory-sequence">
+                            <!-- Las imágenes se generarán dinámicamente -->
+                        </div>
+                        
+                        <!-- Video de la trayectoria (si se genera) -->
+                        <div id="trajectory-video-container" class="trajectory-video-container d-none">
+                            <h5 class="mb-3">Video de la Trayectoria</h5>
+                            <video id="trajectory-video" class="trajectory-video" controls></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para mostrar imágenes en tamaño completo -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalLabel">Evidencia de Detección</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modalImage" src="/placeholder.svg" class="img-fluid" alt="Evidencia de detección">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let currentVideoPath = null;
+        let currentModelPath = null;
+        let classChart = null;
+        let confidenceChart = null;
+        let timeChart = null;
+        let trackChart = null;
+        let statusCheckInterval = null;
+        let detectionClasses = new Set();
+        let allDetections = [];
+        let selectedClasses = new Set();
+        let alertClasses = new Set(); // Clases seleccionadas para generar alertas
+        let imageModal = null;
+        let processedVideoUrl = null;
+        let trajectoryObjects = []; // Almacena objetos con trayectorias
+        let selectedTrajectory = null; // Trayectoria seleccionada actualmente
+        let trajectoryPlayInterval = null; // Intervalo para reproducción de trayectoria
+        let colorChart = null; // Gráfico para distribución de colores
+        let timelineChart = null; // Gráfico para línea de tiempo
+        
+        // Elementos DOM
+        const modelDropZone = document.getElementById('model-drop-zone');
+        const modelUpload = document.getElementById('model-upload');
+        const modelInfo = document.getElementById('model-info');
+        const modelName = document.getElementById('model-name');
+        const dropZone = document.getElementById('drop-zone');
+        const videoUpload = document.getElementById('video-upload');
+        const uploadInfo = document.getElementById('upload-info');
+        const fileName = document.getElementById('file-name');
+        const thresholdSlider = document.getElementById('threshold');
+        const thresholdValue = document.getElementById('threshold-value');
+        const showTracks = document.getElementById('show-tracks');
+        const detectBtn = document.getElementById('detect-btn');
+        const resultsContainer = document.getElementById('results-container');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressStatus = document.getElementById('progress-status');
+        const videoPreviewContainer = document.getElementById('video-preview-container');
+        const previewVideo = document.getElementById('preview-video');
+        const previewVideoError = document.getElementById('preview-video-error');
+        const classFiltersContainer = document.getElementById('class-filters-container');
+        const classCheckboxes = document.getElementById('class-checkboxes');
+        const applyFiltersBtn = document.getElementById('apply-filters-btn');
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+        const searchInput = document.getElementById('search-input');
+        const trackIdInput = document.getElementById('track-id-input');
+        const searchBtn = document.getElementById('search-btn');
+        const galleryContainer = document.getElementById('gallery-container');
+        const violationCount = document.getElementById('violation-count');
+        const complianceSummary = document.getElementById('compliance-summary');
+        const safetyAlerts = document.getElementById('safety-alerts');
+        const alertClassesContainer = document.getElementById('alert-classes-container');
+        const applyAlertsBtn = document.getElementById('apply-alerts-btn');
+        const fullPreviewVideo = document.getElementById('full-preview-video');
+        const videoStatusMessage = document.getElementById('video-status-message');
+        const fullVideoError = document.getElementById('full-video-error');
+        const reloadVideoBtn = document.getElementById('reload-video-btn');
+        const downloadVideoBtn = document.getElementById('download-video-btn');
+        const viewFullVideoBtn = document.getElementById('view-full-video-btn');
+        
+        // Elementos DOM para trayectorias
+        const trajectoryClassFilter = document.getElementById('trajectory-class-filter');
+        const trajectorySort = document.getElementById('trajectory-sort');
+        const trajectoryObjectsContainer = document.getElementById('trajectory-objects-container');
+        const trajectoryDetailContainer = document.getElementById('trajectory-detail-container');
+        const trajectoryDetailTitle = document.getElementById('trajectory-detail-title');
+        const trajectoryClass = document.getElementById('trajectory-class');
+        const trajectoryId = document.getElementById('trajectory-id');
+        const trajectoryFrames = document.getElementById('trajectory-frames');
+        const trajectoryTimeline = document.getElementById('trajectory-timeline');
+        const trajectorySequence = document.getElementById('trajectory-sequence');
+        const playTrajectoryBtn = document.getElementById('play-trajectory-btn');
+        const exportTrajectoryBtn = document.getElementById('export-trajectory-btn');
+        const createTrajectoryVideoBtn = document.getElementById('create-trajectory-video-btn');
+        const closeTrajectoryBtn = document.getElementById('close-trajectory-btn');
+        const trajectoryVideoContainer = document.getElementById('trajectory-video-container');
+        const trajectoryVideo = document.getElementById('trajectory-video');
+        
+
+        // Evento para la pestaña de investigación forense
+        document.getElementById('forensic-tab').addEventListener('click', function() {
+                loadColorHistogram();
+            });
+            
+            // Configurar el color picker
+            document.getElementById('color-picker').addEventListener('input', function() {
+                document.getElementById('color-hex').textContent = this.value;
+            });
+            
+            // Botón de búsqueda forense
+            document.getElementById('forensic-search-btn').addEventListener('click', function() {
+                forensicSearch();
+            });
+
+        // Inicializar el modal de imagen
+        document.addEventListener('DOMContentLoaded', function() {
+            imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+            
+            // Configurar el evento para mostrar imágenes en el modal
+            document.getElementById('modalImage').addEventListener('click', function() {
+                imageModal.hide();
+            });
+            
+            // Ocultar botones de video inicialmente
+            reloadVideoBtn.style.display = 'none';
+            downloadVideoBtn.style.display = 'none';
+            
+            // Configurar eventos para botones de video
+            reloadVideoBtn.addEventListener('click', function() {
+                reloadVideo();
+            });
+            
+            downloadVideoBtn.addEventListener('click', function() {
+                downloadVideo();
+            });
+            
+            viewFullVideoBtn.addEventListener('click', function() {
+                // Cambiar a la pestaña de video
+                document.getElementById('video-tab').click();
+            });
+            
+            // Configurar eventos para trayectorias
+            trajectoryClassFilter.addEventListener('change', filterTrajectories);
+            trajectorySort.addEventListener('change', sortTrajectories);
+            playTrajectoryBtn.addEventListener('click', playTrajectory);
+            exportTrajectoryBtn.addEventListener('click', exportTrajectory);
+            createTrajectoryVideoBtn.addEventListener('click', createTrajectoryVideo);
+            closeTrajectoryBtn.addEventListener('click', closeTrajectoryDetail);
+            
+            // Evento para la pestaña de trayectorias
+            document.getElementById('trajectories-tab').addEventListener('click', function() {
+                loadTrajectories();
+            });
+        });
+        
+        // Event listeners para carga de modelo
+        modelDropZone.addEventListener('click', () => modelUpload.click());
+        modelDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            modelDropZone.classList.add('active');
+        });
+        modelDropZone.addEventListener('dragleave', () => {
+            modelDropZone.classList.remove('active');
+        });
+        modelDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            modelDropZone.classList.remove('active');
+            
+            if (e.dataTransfer.files.length) {
+                handleModelUpload(e.dataTransfer.files[0]);
+            }
+        });
+        
+        modelUpload.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleModelUpload(e.target.files[0]);
+            }
+        });
+        
+        // Event listeners para carga de video
+        dropZone.addEventListener('click', () => videoUpload.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('active');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            
+            if (e.dataTransfer.files.length) {
+                handleFileUpload(e.dataTransfer.files[0]);
+            }
+        });
+        
+        videoUpload.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+        
+        // Event listeners para el umbral de confianza
+        thresholdSlider.addEventListener('input', () => {
+            thresholdValue.textContent = thresholdSlider.value;
+        });
+        
+        detectBtn.addEventListener('click', runDetection);
+        searchBtn.addEventListener('click', searchDetections);
+        applyFiltersBtn.addEventListener('click', applyClassFilters);
+        clearFiltersBtn.addEventListener('click', clearClassFilters);
+        applyAlertsBtn.addEventListener('click', generateSafetyReport);
+        
+        // Eventos de cambio de pestaña para cargar datos
+        document.getElementById('video-tab').addEventListener('click', function() {
+            // Si hay un video procesado, asegurarse de que se muestre correctamente
+            if (processedVideoUrl) {
+                reloadVideo();
+            }
+        });
+        document.getElementById('dashboard-tab').addEventListener('click', loadDashboardData);
+        document.getElementById('gallery-tab').addEventListener('click', () => searchDetections());
+        document.getElementById('safety-tab').addEventListener('click', function() {
+            generateAlertClassOptions();
+            generateSafetyReport();
+        });
+        
+        // Funciones
+        function handleModelUpload(file) {
+            if (!file.name.endsWith('.pt')) {
+                alert('Por favor, carga un archivo de modelo YOLOv8 (.pt).');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('model', file);
+            
+            modelInfo.classList.remove('d-none');
+            modelName.textContent = `Cargando: ${file.name}`;
+            
+            fetch('/upload_model', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentModelPath = data.model_path;
+                    modelName.textContent = `Modelo cargado: ${file.name}`;
+                    updateDetectButton();
+                } else {
+                    alert('Error al cargar el modelo: ' + data.error);
+                    modelInfo.classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al cargar el modelo. Por favor, inténtalo de nuevo.');
+                modelInfo.classList.add('d-none');
+            });
+        }
+        
+        function handleFileUpload(file) {
+            if (!file.type.startsWith('video/')) {
+                alert('Por favor, carga un archivo de video.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('video', file);
+            
+            uploadInfo.classList.remove('d-none');
+            fileName.textContent = `Cargando: ${file.name}`;
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentVideoPath = data.video_path;
+                    fileName.textContent = `Listo: ${file.name}`;
+                    updateDetectButton();
+                } else {
+                    alert('Error al cargar: ' + data.error);
+                    uploadInfo.classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al cargar. Por favor, inténtalo de nuevo.');
+                uploadInfo.classList.add('d-none');
+            });
+        }
+        
+        function updateDetectButton() {
+            detectBtn.disabled = !(currentModelPath && currentVideoPath);
+        }
+        
+        // Función para iniciar la detección y monitorear el progreso
+        function runDetection() {
+            if (!currentModelPath) {
+                alert('Por favor, carga primero un modelo YOLOv8.');
+                return;
+            }
+            
+            if (!currentVideoPath) {
+                alert('Por favor, carga primero un video.');
+                return;
+            }
+            
+            detectBtn.disabled = true;
+            resultsContainer.innerHTML = '<p>Inicializando proceso de detección...</p>';
+            progressContainer.classList.remove('d-none');
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            progressStatus.textContent = 'Iniciando proceso de detección...';
+            
+            // Ocultar contenedores de resultados previos
+            videoPreviewContainer.classList.add('d-none');
+            classFiltersContainer.classList.add('d-none');
+            
+            // Reiniciar variables globales
+            detectionClasses = new Set();
+            allDetections = [];
+            selectedClasses = new Set();
+            alertClasses = new Set();
+            processedVideoUrl = null;
+            trajectoryObjects = [];
+            
+            fetch('/detect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    video_path: currentVideoPath,
+                    model_path: currentModelPath,
+                    threshold: thresholdSlider.value,
+                    show_tracks: showTracks.checked
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Iniciar monitoreo del progreso
+                    startProgressMonitoring();
+                } else {
+                    alert('Error en la detección: ' + data.error);
+                    console.error('Detalles del error:', data.traceback);
+                    resultsContainer.innerHTML = '<p>Error en la detección. Los detalles del error se han registrado en la consola.</p>';
+                    progressContainer.classList.add('d-none');
+                    detectBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error de Fetch:', error);
+                alert('Error en la detección. Por favor, revisa la consola para más detalles.');
+                detectBtn.disabled = false;
+                resultsContainer.innerHTML = '<p>Ocurrió un error durante la detección. Revisa la consola para más detalles.</p>';
+                progressContainer.classList.add('d-none');
+            });
+        }
+        
+        // Función para monitorear el progreso del procesamiento
+        function startProgressMonitoring() {
+            // Limpiar cualquier intervalo existente
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+            
+            // Verificar el estado cada 2 segundos
+            statusCheckInterval = setInterval(() => {
+                fetch('/processing_status')
+                    .then(response => response.json())
+                    .then(status => {
+                        // Actualizar barra de progreso
+                        const progress = status.progress || 0;
+                        progressBar.style.width = `${progress}%`;
+                        progressBar.textContent = `${progress}%`;
+                        progressBar.setAttribute('aria-valuenow', progress);
+                        
+                        // Actualizar mensaje de estado
+                        switch(status.status) {
+                            case 'loading_model':
+                                progressStatus.textContent = 'Cargando modelo YOLOv8...';
+                                break;
+                            case 'processing_video':
+                                progressStatus.textContent = `Procesando video: ${status.current_frame}/${status.total_frames} frames`;
+                                break;
+                            case 'completed':
+                                progressStatus.textContent = '¡Procesamiento completado con éxito!';
+                                clearInterval(statusCheckInterval);
+                                displayResults(status);
+                                detectBtn.disabled = false;
+                                break;
+                            case 'error':
+                                progressStatus.textContent = `Error: ${status.error}`;
+                                clearInterval(statusCheckInterval);
+                                resultsContainer.innerHTML = `<p class="text-danger">Error: ${status.error}</p>`;
+                                detectBtn.disabled = false;
+                                break;
+                            default:
+                                progressStatus.textContent = 'Procesando...';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al verificar el estado del procesamiento:', error);
+                        progressStatus.textContent = 'Error al verificar el estado';
+                    });
+            }, 2000);
+        }
+        
+        // Función para recargar el video
+        function reloadVideo() {
+            if (!processedVideoUrl) return;
+            
+            // Añadir timestamp para evitar caché
+            const timestamp = new Date().getTime();
+            const videoUrl = `${processedVideoUrl}?t=${timestamp}`;
+            
+            console.log('Recargando video desde:', videoUrl);
+            
+            // Actualizar el video en la pestaña de video procesado
+            fullPreviewVideo.src = videoUrl;
+            fullPreviewVideo.load();
+            
+            // Mostrar botones y ocultar mensaje
+            reloadVideoBtn.style.display = 'inline-block';
+            downloadVideoBtn.style.display = 'inline-block';
+            videoStatusMessage.style.display = 'none';
+            fullVideoError.style.display = 'none';
+            
+            // Manejar errores
+            fullPreviewVideo.onerror = function(e) {
+                console.error('Error al cargar el video completo:', e);
+                fullVideoError.style.display = 'block';
+            };
+        }
+        
+        // Función para descargar el video
+        function downloadVideo() {
+            if (!processedVideoUrl) return;
+            
+            // Crear un enlace temporal para descargar
+            const a = document.createElement('a');
+            a.href = processedVideoUrl;
+            a.download = processedVideoUrl.split('/').pop().split('?')[0]; // Extraer nombre del archivo
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        // Función para mostrar los resultados
+        function displayResults(data) {
+            if (!data.detections || data.detections.length === 0) {
+                resultsContainer.innerHTML = '<p>No se detectaron objetos en el video.</p>';
+                progressContainer.classList.add('d-none');
+                return;
+            }
+            
+            // Guardar todas las detecciones
+            allDetections = data.detections.filter(detection => detection.class !== 'frame');
+            
+            // Recopilar todas las clases únicas
+            allDetections.forEach(detection => {
+                detectionClasses.add(detection.class);
+                selectedClasses.add(detection.class); // Inicialmente seleccionar todas las clases
+            });
+            
+            // Mostrar el video procesado
+            if (data.output_video) {
+                // Usar la ruta directa del video
+                let videoPath = `/outputs/${data.output_video_filename}`;
+                
+                // Guardar la URL del video procesado
+                processedVideoUrl = videoPath;
+                
+                console.log('Cargando video desde:', videoPath);
+                
+                // Mostrar el contenedor de video
+                videoPreviewContainer.classList.remove('d-none');
+                
+                // Actualizar el video en la pestaña de detección
+                previewVideo.src = videoPath;
+                previewVideo.load();
+                
+                // Actualizar el video en la pestaña de video procesado
+                fullPreviewVideo.src = videoPath;
+                fullPreviewVideo.load();
+                videoStatusMessage.style.display = 'none';
+                
+                // Mostrar botones
+                reloadVideoBtn.style.display = 'inline-block';
+                downloadVideoBtn.style.display = 'inline-block';
+            }
+            
+            // Generar checkboxes para filtrar por clase
+            generateClassFilters();
+            
+            // Generar opciones de clases para alertas
+            generateAlertClassOptions();
+            
+            // Mostrar resultados filtrados
+            displayFilteredResults();
+            
+            // Ocultar barra de progreso
+            progressContainer.classList.add('d-none');
+            
+            // Actualizar datos del tablero
+            loadDashboardData();
+            
+            // Generar informe de seguridad
+            generateSafetyReport();
+            
+            // Procesar datos para trayectorias
+            processTrajectoryData();
+        }
+        
+        // Función para generar los filtros de clase
+        function generateClassFilters() {
+            if (detectionClasses.size === 0) return;
+            
+            let html = '';
+            detectionClasses.forEach(className => {
+                html += `
+                    <div class="class-checkbox">
+                        <input type="checkbox" id="class-${className}" class="form-check-input" value="${className}" checked>
+                        <label for="class-${className}" class="form-check-label">${className}</label>
+                    </div>
+                `;
+            });
+            
+            classCheckboxes.innerHTML = html;
+            classFiltersContainer.classList.remove('d-none');
+            
+            // Añadir event listeners a los checkboxes
+            document.querySelectorAll('.class-checkbox input').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedClasses.add(this.value);
+                    } else {
+                        selectedClasses.delete(this.value);
+                    }
+                    displayFilteredResults(); // Actualizar resultados al cambiar filtros
+                });
+            });
+        }
+        
+        // Función para generar opciones de clases para alertas
+        function generateAlertClassOptions() {
+            if (detectionClasses.size === 0) {
+                alertClassesContainer.innerHTML = '<p>No hay clases disponibles. Ejecuta la detección primero.</p>';
+                return;
+            }
+            
+            let html = '';
+            detectionClasses.forEach(className => {
+                const isSelected = alertClasses.has(className);
+                
+                html += `
+                    <div class="alert-class-item ${isSelected ? 'selected' : ''}" data-class="${className}">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="alert-${className}" 
+                                   value="${className}" ${isSelected ? 'checked' : ''}>
+                            <label class="form-check-label" for="alert-${className}">
+                                ${className}
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            alertClassesContainer.innerHTML = html;
+            
+            // Añadir event listeners a los checkboxes
+            document.querySelectorAll('.alert-class-item input').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const parentItem = this.closest('.alert-class-item');
+                    if (this.checked) {
+                        alertClasses.add(this.value);
+                        parentItem.classList.add('selected');
+                    } else {
+                        alertClasses.delete(this.value);
+                        parentItem.classList.remove('selected');
+                    }
+                });
+            });
+            
+            // También permitir hacer clic en el div completo
+            document.querySelectorAll('.alert-class-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // Evitar activación si se hizo clic directamente en el checkbox
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = this.querySelector('input[type="checkbox"]');
+                        checkbox.checked = !checkbox.checked;
+                        
+                        // Disparar el evento change manualmente
+                        const event = new Event('change');
+                        checkbox.dispatchEvent(event);
+                    }
+                });
+            });
+        }
+
+        // Función para aplicar filtros de clase
+        function applyClassFilters() {
+            displayFilteredResults();
+        }
+        
+        // Función para limpiar filtros de clase
+        function clearClassFilters() {
+            document.querySelectorAll('.class-checkbox input').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            
+            selectedClasses = new Set(detectionClasses);
+            displayFilteredResults();
+        }
+        
+        // Función para mostrar resultados filtrados
+        function displayFilteredResults() {
+            // Filtrar detecciones por clases seleccionadas
+            const filteredDetections = allDetections.filter(detection => 
+                selectedClasses.has(detection.class)
+            );
+            
+            if (filteredDetections.length === 0) {
+                resultsContainer.innerHTML = '<p>No hay detecciones que coincidan con los filtros seleccionados.</p>';
+                return;
+            }
+            
+            // Agrupar detecciones por ID de seguimiento
+            const detectionsByTrack = {};
+            filteredDetections.forEach(detection => {
+                const trackId = detection.track_id !== null ? `Seguimiento ${detection.track_id}` : 'Sin seguimiento';
+                if (!detectionsByTrack[trackId]) {
+                    detectionsByTrack[trackId] = [];
+                }
+                detectionsByTrack[trackId].push(detection);
+            });
+            
+            let html = `<h4>Se encontraron ${Object.keys(detectionsByTrack).length} objetos con seguimiento:</h4>`;
+            
+            for (const [trackId, detections] of Object.entries(detectionsByTrack)) {
+                html += `
+                    <div class="mb-4">
+                        <h5>${trackId} (${detections.length} frames)</h5>
+                        <div class="row">
+                `;
+                
+                detections.slice(0, 4).forEach(detection => {
+                    // Usar base64 si está disponible, de lo contrario usar la ruta de la imagen
+                    let imgSrc;
+                    if (detection.image_base64) {
+                        imgSrc = `data:image/jpeg;base64,${detection.image_base64}`;
+                    } else {
+                        // Añadir timestamp para evitar caché
+                        const timestamp = new Date().getTime();
+                        imgSrc = `${detection.image_path}?t=${timestamp}`;
+                    }
+                    
+                    html += `
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="card">
+                                <div class="position-relative">
+                                    <img src="${imgSrc}" class="card-img-top" alt="Detección" 
+                                         onclick="showImageModal('${imgSrc}')"
+                                         onerror="this.onerror=null; this.src='/static/placeholder.jpg?t=${new Date().getTime()}'; console.error('Error al cargar imagen: ${imgSrc}');">
+                                    <span class="track-id-badge">ID: ${detection.track_id}</span>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">Clase: ${detection.class}<br>Confianza: ${(detection.confidence * 100).toFixed(1)}%</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        // Función para mostrar imagen en modal
+        function showImageModal(imgSrc) {
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = imgSrc;
+            imageModal.show();
+        }
+        
+        function loadDashboardData() {
+            fetch('/dashboard_stats')
+                .then(response => response.json())
+                .then(data => {
+                    updateDashboardCharts(data);
+                })
+                .catch(error => {
+                    console.error('Error al cargar datos del tablero:', error);
+                });
+        }
+        
+        function updateDashboardCharts(data) {
+            // Gráfico de distribución de clases
+            const classLabels = Object.keys(data.class_distribution);
+            const classValues = Object.values(data.class_distribution);
+            
+            if (classChart) {
+                classChart.destroy();
+            }
+            
+            classChart = new Chart(document.getElementById('class-chart'), {
+                type: 'bar',
+                data: {
+                    labels: classLabels,
+                    datasets: [{
+                        label: 'Número de Detecciones',
+                        data: classValues,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Gráfico de confianza promedio
+            const confLabels = Object.keys(data.avg_confidence);
+            const confValues = Object.values(data.avg_confidence).map(val => val * 100);
+            
+            if (confidenceChart) {
+                confidenceChart.destroy();
+            }
+            
+            confidenceChart = new Chart(document.getElementById('confidence-chart'), {
+                type: 'bar',
+                data: {
+                    labels: confLabels,
+                    datasets: [{
+                        label: 'Confianza Promedio (%)',
+                        data: confValues,
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+            
+            // Gráfico de serie temporal
+            const timeLabels = Object.keys(data.time_series);
+            const timeValues = Object.values(data.time_series);
+            
+            if (timeChart) {
+                timeChart.destroy();
+            }
+            
+            timeChart = new Chart(document.getElementById('time-chart'), {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Detecciones por Día',
+                        data: timeValues,
+                        fill: false,
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Gráfico de distribución de IDs de seguimiento
+            if (data.track_distribution) {
+                const trackLabels = Object.keys(data.track_distribution);
+                const trackValues = Object.values(data.track_distribution);
+                
+                if (trackChart) {
+                    trackChart.destroy();
+                }
+                
+                trackChart = new Chart(document.getElementById('track-chart'), {
+                    type: 'bar',
+                    data: {
+                        labels: trackLabels,
+                        datasets: [{
+                            label: 'Detecciones por ID de Seguimiento',
+                            data: trackValues,
+                            backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function searchDetections() {
+            const searchTerm = searchInput.value.trim();
+            const trackId = trackIdInput.value.trim();
+            
+            let url = `/search_detections?class=${encodeURIComponent(searchTerm)}`;
+            if (trackId) {
+                url += `&track_id=${encodeURIComponent(trackId)}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    displayGallery(data.detections);
+                })
+                .catch(error => {
+                    console.error('Error al buscar detecciones:', error);
+                    galleryContainer.innerHTML = '<p class="text-danger">Error al cargar detecciones.</p>';
+                });
+        }
+        
+        function displayGallery(detections) {
+            if (detections.length === 0) {
+                galleryContainer.innerHTML = '<p>No se encontraron detecciones.</p>';
+                return;
+            }
+            
+            let html = '';
+            
+            detections.forEach(detection => {
+                if (detection.class === 'frame') return; // Ignorar frames de galería
+                
+                const date = new Date(detection.timestamp).toLocaleString();
+                
+                // Usar base64 si está disponible, de lo contrario usar la ruta de la imagen
+                let imgSrc;
+                if (detection.image_base64) {
+                    imgSrc = `data:image/jpeg;base64,${detection.image_base64}`;
+                } else {
+                    // Añadir timestamp para evitar caché
+                    const timestamp = new Date().getTime();
+                    imgSrc = `${detection.image_path}?t=${timestamp}`;
+                }
+                
+                html += `
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card detection-card">
+                            <div class="position-relative">
+                                <img src="${imgSrc}" class="detection-image" alt="${detection.class}"
+                                     onclick="showImageModal('${imgSrc}')"
+                                     onerror="this.onerror=null; this.src='/static/placeholder.jpg?t=${new Date().getTime()}'; console.error('Error al cargar imagen: ${imgSrc}');">
+                                ${detection.track_id !== null ? `<span class="track-id-badge">ID: ${detection.track_id}</span>` : ''}
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${detection.class}</h5>
+                                <p class="card-text">
+                                    Confianza: ${(detection.confidence * 100).toFixed(1)}%<br>
+                                    Fecha: ${date}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            galleryContainer.innerHTML = html;
+        }
+        
+        // Función para generar el informe de seguridad
+        function generateSafetyReport() {
+            if (allDetections.length === 0) {
+                complianceSummary.innerHTML = '<p>No hay datos disponibles. Ejecuta la detección primero.</p>';
+                safetyAlerts.innerHTML = '';
+                violationCount.textContent = '0';
+                return;
+            }
+            
+            // Contar detecciones por clase
+            const classCounts = {};
+            allDetections.forEach(detection => {
+                if (!classCounts[detection.class]) {
+                    classCounts[detection.class] = 0;
+                }
+                classCounts[detection.class]++;
+            });
+            
+            // Generar resumen de detecciones
+            let summaryHtml = '<ul class="list-group mb-3">';
+            for (const [className, count] of Object.entries(classCounts)) {
+                // Destacar las clases que tienen alertas configuradas
+                const hasAlert = alertClasses.has(className);
+                summaryHtml += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center ${hasAlert ? 'list-group-item-warning' : ''}">
+                        ${className} ${hasAlert ? '<span class="badge bg-warning text-dark me-2">Alerta</span>' : ''}
+                        <span class="badge bg-primary rounded-pill">${count}</span>
+                    </li>
+                `;
+            }
+            summaryHtml += '</ul>';
+            
+            complianceSummary.innerHTML = summaryHtml;
+            
+            // Buscar objetos en las clases seleccionadas para alertas
+            const alertItems = [];
+            
+            // Agrupar detecciones por clase
+            const detectionsByClass = {};
+            allDetections.forEach(detection => {
+                if (!detectionsByClass[detection.class]) {
+                    detectionsByClass[detection.class] = [];
+                }
+                detectionsByClass[detection.class].push(detection);
+            });
+            
+            // Generar alertas para cada clase seleccionada
+            alertClasses.forEach(className => {
+                if (detectionsByClass[className] && detectionsByClass[className].length > 0) {
+                    alertItems.push({
+                        className: className,
+                        count: detectionsByClass[className].length,
+                        detections: detectionsByClass[className]
+                    });
+                }
+            });
+            
+            // Actualizar contador de alertas
+            violationCount.textContent = alertItems.reduce((total, v) => total + v.count, 0).toString();
+            
+            // Generar alertas basadas en las clases seleccionadas
+            let alertsHtml = '';
+            
+            if (alertItems.length > 0) {
+                alertItems.forEach(item => {
+                    let imagesHtml = '<div class="row mt-2">';
+                    
+                    // Mostrar hasta 4 imágenes por alerta
+                    item.detections.slice(0, 4).forEach(detection => {
+                        let imgSrc;
+                        if (detection.image_base64) {
+                            imgSrc = `data:image/jpeg;base64,${detection.image_base64}`;
+                        } else {
+                            const timestamp = new Date().getTime();
+                            imgSrc = `${detection.image_path}?t=${timestamp}`;
+                        }
+                        
+                        imagesHtml += `
+                            <div class="col-md-3 col-sm-6 mb-2">
+                                <img src="${imgSrc}" class="img-fluid rounded alert-evidence-image" 
+                                     alt="Evidencia" onclick="showImageModal('${imgSrc}')"
+                                     onerror="this.onerror=null; this.src='/static/placeholder.jpg';">
+                                <div class="text-center">
+                                    <small>ID: ${detection.track_id || 'N/A'}</small>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    imagesHtml += '</div>';
+                    
+                    alertsHtml += `
+                        <div class="safety-alert safety-critical mb-3">
+                            <h5>Alerta: ${item.className} (${item.count} detecciones)</h5>
+                            <p>Haga clic en las imágenes para ver en detalle:</p>
+                            <div class="alert-evidence-container">
+                                ${imagesHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                alertsHtml += `
+                    <div class="safety-alert mb-3">
+                        <h5>Sin Alertas Activas</h5>
+                        <p>No se detectaron objetos en las clases seleccionadas para alertas. Continúe monitoreando según sea necesario.</p>
+                    </div>
+                `;
+            }
+            
+            // Añadir recordatorio
+            alertsHtml += `
+                <div class="safety-alert mb-3">
+                    <h5>Recordatorio: Monitoreo Continuo</h5>
+                    <p>Recuerde revisar periódicamente la configuración de alertas para adaptarla a sus necesidades de monitoreo actuales.</p>
+                </div>
+            `;
+            
+            safetyAlerts.innerHTML = alertsHtml;
+        }
+
+        // Función global para mostrar imágenes en el modal (accesible desde HTML)
+        window.showImageModal = function(imgSrc) {
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = imgSrc;
+            imageModal.show();
+        };
+        
+        // NUEVAS FUNCIONES PARA TRAYECTORIAS
+        
+        // Procesar datos para trayectorias
+        function processTrajectoryData() {
+            if (allDetections.length === 0) return;
+            
+            // Agrupar detecciones por ID de seguimiento
+            const detectionsByTrack = {};
+            
+            allDetections.forEach(detection => {
+                // Solo procesar detecciones con ID de seguimiento
+                if (detection.track_id !== null) {
+                    const trackId = detection.track_id;
+                    if (!detectionsByTrack[trackId]) {
+                        detectionsByTrack[trackId] = [];
+                    }
+                    detectionsByTrack[trackId].push(detection);
+                }
+            });
+            
+            // Convertir a array de objetos de trayectoria
+            trajectoryObjects = [];
+            
+            for (const [trackId, detections] of Object.entries(detectionsByTrack)) {
+                // Ordenar por número de frame
+                detections.sort((a, b) => a.frame - b.frame);
+                
+                // Obtener la clase más frecuente para este track
+                const classCounts = {};
+                detections.forEach(d => {
+                    if (!classCounts[d.class]) classCounts[d.class] = 0;
+                    classCounts[d.class]++;
+                });
+                
+                const mainClass = Object.entries(classCounts)
+                    .sort((a, b) => b[1] - a[1])[0][0];
+                
+                // Crear objeto de trayectoria
+                trajectoryObjects.push({
+                    id: parseInt(trackId),
+                    class: mainClass,
+                    frames: detections.length,
+                    detections: detections,
+                    firstFrame: detections[0].frame,
+                    lastFrame: detections[detections.length - 1].frame
+                });
+            }
+            
+            // Ordenar por ID
+            trajectoryObjects.sort((a, b) => a.id - b.id);
+            
+            // Actualizar filtro de clases para trayectorias
+            updateTrajectoryClassFilter();
+        }
+        
+        // Actualizar filtro de clases para trayectorias
+        function updateTrajectoryClassFilter() {
+            // Obtener clases únicas de trayectorias
+            const classes = new Set();
+            trajectoryObjects.forEach(obj => classes.add(obj.class));
+            
+            // Generar opciones
+            let options = '<option value="">Todas las clases</option>';
+            classes.forEach(className => {
+                options += `<option value="${className}">${className}</option>`;
+            });
+            
+            trajectoryClassFilter.innerHTML = options;
+        }
+        
+        // Cargar trayectorias
+        function loadTrajectories() {
+            if (trajectoryObjects.length === 0) {
+                trajectoryObjectsContainer.innerHTML = `
+                    <div class="col-12">
+                        <div class="no-trajectory-message">
+                            <h5>No hay datos de trayectorias disponibles</h5>
+                            <p>Ejecuta la detección con seguimiento primero para visualizar las trayectorias de los objetos.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Filtrar y ordenar trayectorias
+            displayTrajectories();
+        }
+        
+        // Filtrar trayectorias
+        function filterTrajectories() {
+            displayTrajectories();
+        }
+        
+        // Ordenar trayectorias
+        function sortTrajectories() {
+            displayTrajectories();
+        }
+        
+        // Mostrar trayectorias
+        function displayTrajectories() {
+            // Obtener valores de filtros
+            const classFilter = trajectoryClassFilter.value;
+            const sortBy = trajectorySort.value;
+            
+            // Filtrar por clase
+            let filtered = trajectoryObjects;
+            if (classFilter) {
+                filtered = filtered.filter(obj => obj.class === classFilter);
+            }
+            
+            // Ordenar
+            switch (sortBy) {
+                case 'id':
+                    filtered.sort((a, b) => a.id - b.id);
+                    break;
+                case 'class':
+                    filtered.sort((a, b) => a.class.localeCompare(b.class));
+                    break;
+                case 'frames':
+                    filtered.sort((a, b) => b.frames - a.frames);
+                    break;
+            }
+            
+            // Generar HTML
+            let html = '';
+            
+            filtered.forEach(obj => {
+                // Obtener la primera imagen para mostrar como miniatura
+                const firstDetection = obj.detections[0];
+                let imgSrc;
+                
+                if (firstDetection.image_base64) {
+                    imgSrc = `data:image/jpeg;base64,${firstDetection.image_base64}`;
+                } else {
+                    const timestamp = new Date().getTime();
+                    imgSrc = `${firstDetection.image_path}?t=${timestamp}`;
+                }
+                
+                html += `
+                    <div class="col-md-3 col-sm-6 mb-4">
+                        <div class="card trajectory-card" data-trajectory-id="${obj.id}">
+                            <div class="position-relative">
+                                <img src="${imgSrc}" class="card-img-top" alt="${obj.class}" 
+                                     onerror="this.onerror=null; this.src='/static/placeholder.jpg';">
+                                <span class="track-id-badge">ID: ${obj.id}</span>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${obj.class}</h5>
+                                <p class="card-text">
+                                    Frames: ${obj.frames}<br>
+                                    Duración: ${obj.lastFrame - obj.firstFrame} frames
+                                </p>
+                                <button class="btn btn-sm btn-primary view-trajectory-btn" data-trajectory-id="${obj.id}">
+                                    Ver Trayectoria
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (html === '') {
+                html = `
+                    <div class="col-12">
+                        <div class="no-trajectory-message">
+                            <h5>No se encontraron trayectorias con los filtros seleccionados</h5>
+                            <p>Intenta cambiar los filtros o ejecuta una nueva detección.</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            trajectoryObjectsContainer.innerHTML = html;
+            
+            // Añadir event listeners a los botones de ver trayectoria
+            document.querySelectorAll('.view-trajectory-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const trajectoryId = parseInt(this.getAttribute('data-trajectory-id'));
+                    viewTrajectory(trajectoryId);
+                });
+            });
+            
+            // También permitir hacer clic en la tarjeta completa
+            document.querySelectorAll('.trajectory-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // Evitar activación si se hizo clic directamente en el botón
+                    if (!e.target.classList.contains('view-trajectory-btn')) {
+                        const trajectoryId = parseInt(this.getAttribute('data-trajectory-id'));
+                        viewTrajectory(trajectoryId);
+                    }
+                });
+            });
+        }
+        
+        // Ver trayectoria específica
+        function viewTrajectory(trajectoryId) {
+            // Buscar la trayectoria
+            const trajectory = trajectoryObjects.find(obj => obj.id === trajectoryId);
+            if (!trajectory) return;
+            
+            // Guardar la trayectoria seleccionada
+            selectedTrajectory = trajectory;
+            
+            // Actualizar información
+            trajectoryDetailTitle.textContent = `Trayectoria del Objeto: ${trajectory.class} (ID: ${trajectory.id})`;
+            trajectoryClass.textContent = trajectory.class;
+            trajectoryId.textContent = trajectory.id;
+            trajectoryFrames.textContent = trajectory.frames;
+            
+            // Generar línea de tiempo
+            generateTimeline(trajectory);
+            
+            // Generar secuencia de imágenes
+            generateSequence(trajectory);
+            
+            // Ocultar contenedor de video si estaba visible
+            trajectoryVideoContainer.classList.add('d-none');
+            
+            // Mostrar detalles
+            trajectoryDetailContainer.classList.remove('d-none');
+            
+            // Desplazarse a los detalles
+            trajectoryDetailContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Generar línea de tiempo
+        function generateTimeline(trajectory) {
+            const totalFrames = trajectory.lastFrame - trajectory.firstFrame;
+            let html = '';
+            
+            // Crear marcadores para cada 10% del recorrido
+            const numMarkers = Math.min(10, trajectory.detections.length);
+            const step = trajectory.detections.length / numMarkers;
+            
+            for (let i = 0; i < numMarkers; i++) {
+                const index = Math.floor(i * step);
+                const detection = trajectory.detections[index];
+                const position = (i / (numMarkers - 1)) * 100;
+                
+                html += `
+                    <div class="timeline-marker" style="left: ${position}%;" data-index="${index}">
+                        ${i + 1}
+                    </div>
+                `;
+            }
+            
+            trajectoryTimeline.innerHTML = html;
+            
+            // Añadir event listeners a los marcadores
+            document.querySelectorAll('.timeline-marker').forEach(marker => {
+                marker.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    highlightFrame(index);
+                });
+            });
+        }
+        
+        // Generar secuencia de imágenes
+        function generateSequence(trajectory) {
+            let html = '';
+            
+            trajectory.detections.forEach((detection, index) => {
+                let imgSrc;
+                if (detection.image_base64) {
+                    imgSrc = `data:image/jpeg;base64,${detection.image_base64}`;
+                } else {
+                    const timestamp = new Date().getTime();
+                    imgSrc = `${detection.image_path}?t=${timestamp}`;
+                }
+                
+                html += `
+                    <div class="position-relative">
+                        <img src="${imgSrc}" class="trajectory-image" alt="Frame ${detection.frame}" 
+                             data-index="${index}"
+                             onclick="showImageModal('${imgSrc}')"
+                             onerror="this.onerror=null; this.src='/static/placeholder.jpg';">
+                        <span class="trajectory-frame-info">Frame: ${detection.frame}</span>
+                    </div>
+                `;
+            });
+            
+            trajectorySequence.innerHTML = html;
+        }
+        
+        // Resaltar un frame específico
+        function highlightFrame(index) {
+            // Quitar resaltado anterior
+            document.querySelectorAll('.trajectory-image').forEach(img => {
+                img.style.border = '1px solid #ddd';
+                img.style.transform = 'none';
+            });
+            
+            // Resaltar el frame seleccionado
+            const selectedImg = document.querySelector(`.trajectory-image[data-index="${index}"]`);
+            if (selectedImg) {
+                selectedImg.style.border = '3px solid #0d6efd';
+                selectedImg.style.transform = 'scale(1.05)';
+                
+                // Desplazarse al frame seleccionado
+                selectedImg.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+        
+        // Reproducir trayectoria como una secuencia
+        function playTrajectory() {
+            if (!selectedTrajectory) return;
+            
+            // Detener reproducción anterior si existe
+            if (trajectoryPlayInterval) {
+                clearInterval(trajectoryPlayInterval);
+                playTrajectoryBtn.textContent = 'Reproducir Secuencia';
+                return;
+            }
+            
+            // Cambiar texto del botón
+            playTrajectoryBtn.textContent = 'Detener Reproducción';
+            
+            let currentIndex = 0;
+            
+            // Resaltar el primer frame
+            highlightFrame(currentIndex);
+            
+            // Reproducir secuencia
+            trajectoryPlayInterval = setInterval(() => {
+                currentIndex++;
+                
+                if (currentIndex >= selectedTrajectory.detections.length) {
+                    // Detener al llegar al final
+                    clearInterval(trajectoryPlayInterval);
+                    trajectoryPlayInterval = null;
+                    playTrajectoryBtn.textContent = 'Reproducir Secuencia';
+                    return;
+                }
+                
+                highlightFrame(currentIndex);
+            }, 500); // Cambiar cada 500ms
+        }
+        
+        // Exportar trayectoria como imágenes
+        function exportTrajectory() {
+            if (!selectedTrajectory) return;
+            
+            // Crear un archivo ZIP con las imágenes
+            alert('Funcionalidad de exportación en desarrollo. Esta característica permitirá descargar todas las imágenes de la trayectoria en un archivo ZIP.');
+            
+            // Aquí se implementaría la creación del ZIP con JSZip o similar
+            // y la descarga del archivo
+        }
+        
+        // Crear video de la trayectoria
+        function createTrajectoryVideo() {
+            if (!selectedTrajectory) return;
+            
+            // Mostrar mensaje de procesamiento
+            createTrajectoryVideoBtn.disabled = true;
+            createTrajectoryVideoBtn.textContent = 'Procesando...';
+            
+            // Aquí se implementaría la llamada al backend para crear el video
+            // Por ahora, simulamos la creación con un temporizador
+            setTimeout(() => {
+                // Simular que el video está listo
+                createTrajectoryVideoBtn.disabled = false;
+                createTrajectoryVideoBtn.textContent = 'Crear Video';
+                
+                // Mostrar un video de ejemplo
+                trajectoryVideoContainer.classList.remove('d-none');
+                
+                // Si hay un video procesado, usarlo como ejemplo
+                if (processedVideoUrl) {
+                    trajectoryVideo.src = processedVideoUrl;
+                    trajectoryVideo.load();
+                } else {
+                    // Mensaje si no hay video disponible
+                    trajectoryVideoContainer.innerHTML = `
+                        <div class="alert alert-info">
+                            <p>La funcionalidad de creación de videos de trayectorias está en desarrollo.</p>
+                            <p>Esta característica permitirá generar un video que muestre solo el objeto seleccionado a lo largo de su trayectoria.</p>
+                        </div>
+                    `;
+                }
+                
+                // Desplazarse al video
+                trajectoryVideoContainer.scrollIntoView({ behavior: 'smooth' });
+            }, 2000);
+        }
+        
+        // Cerrar detalle de trayectoria
+        function closeTrajectoryDetail() {
+            // Detener reproducción si está activa
+            if (trajectoryPlayInterval) {
+                clearInterval(trajectoryPlayInterval);
+                trajectoryPlayInterval = null;
+                playTrajectoryBtn.textContent = 'Reproducir Secuencia';
+            }
+            
+            // Ocultar detalles
+            trajectoryDetailContainer.classList.add('d-none');
+            
+            // Limpiar trayectoria seleccionada
+            selectedTrajectory = null;
+        }
+
+        // Función para cargar histograma de colores
+        function loadColorHistogram() {
+            fetch('/color_histogram')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Destruir gráfico anterior si existe
+                        if (colorChart) {
+                            colorChart.destroy();
+                        }
+                        
+                        // Crear nuevo gráfico
+                        colorChart = new Chart(document.getElementById('color-chart'), {
+                            type: 'pie',
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    label: 'Distribución de Colores',
+                                    data: data.data,
+                                    backgroundColor: data.colors,
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: `Colores Dominantes (${data.total_detections} detecciones)`
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Crear la línea de tiempo
+                        updateTimelineChart();
+                    } else {
+                        console.error('Error cargando datos de colores:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error en solicitud de histograma de colores:', error);
+                });
+        }
+        
+        // Función para actualizar el gráfico de línea de tiempo
+        function updateTimelineChart() {
+            // Agrupar detecciones por día/hora
+            const timeData = {};
+            
+            allDetections.forEach(detection => {
+                if (detection.class === 'frame') return; // Ignorar frames completos
+                
+                if (detection.timestamp) {
+                    // Formato: YYYY-MM-DDThh:mm:ss.sssZ
+                    const date = new Date(detection.timestamp);
+                    const dateStr = date.toLocaleDateString();
+                    
+                    if (!timeData[dateStr]) {
+                        timeData[dateStr] = 0;
+                    }
+                    timeData[dateStr]++;
+                }
+            });
+            
+            // Ordenar por fecha
+            const sortedDates = Object.keys(timeData).sort();
+            const sortedCounts = sortedDates.map(date => timeData[date]);
+            
+            // Destruir gráfico anterior si existe
+            if (timelineChart) {
+                timelineChart.destroy();
+            }
+            
+            // Crear nuevo gráfico
+            timelineChart = new Chart(document.getElementById('timeline-chart'), {
+                type: 'bar',
+                data: {
+                    labels: sortedDates,
+                    datasets: [{
+                        label: 'Detecciones por Día',
+                        data: sortedCounts,
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribución Temporal de Detecciones'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Función para realizar búsqueda forense
+        function forensicSearch() {
+            // Obtener parámetros de búsqueda
+            const color = document.getElementById('color-picker').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const startTime = document.getElementById('start-time').value;
+            const endTime = document.getElementById('end-time').value;
+            const sizeMin = document.getElementById('size-min').value;
+            const sizeMax = document.getElementById('size-max').value;
+            
+            // Construir URL con parámetros
+            let url = '/forensic_search?';
+            url += `color=${encodeURIComponent(color)}`;
+            
+            if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
+            if (endDate) url += `&end_date=${encodeURIComponent(endDate)}`;
+            
+            if (startTime && endTime) {
+                url += `&time_range=${encodeURIComponent(startTime)}-${encodeURIComponent(endTime)}`;
+            }
+            
+            if (sizeMin) url += `&size_min=${encodeURIComponent(sizeMin)}`;
+            if (sizeMax) url += `&size_max=${encodeURIComponent(sizeMax)}`;
+            
+            // Mostrar indicador de carga
+            document.getElementById('forensic-results-count').innerHTML = '<p>Buscando...</p>';
+            document.getElementById('forensic-gallery-container').innerHTML = '';
+            
+            // Realizar la búsqueda
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mostrar conteo de resultados
+                        document.getElementById('forensic-results-count').innerHTML = 
+                            `<p>Se encontraron <strong>${data.count}</strong> objetos que coinciden con los criterios de búsqueda.</p>`;
+                        
+                        // Mostrar resultados
+                        displayForensicResults(data.detections);
+                    } else {
+                        console.error('Error en búsqueda forense:', data.error);
+                        document.getElementById('forensic-results-count').innerHTML = 
+                            `<p class="text-danger">Error en la búsqueda: ${data.error}</p>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error en solicitud de búsqueda forense:', error);
+                    document.getElementById('forensic-results-count').innerHTML = 
+                        '<p class="text-danger">Error en la búsqueda. Consulte la consola para más detalles.</p>';
+                });
+        }
+        
+        // Función para mostrar resultados de búsqueda forense
+        function displayForensicResults(detections) {
+            if (detections.length === 0) {
+                document.getElementById('forensic-gallery-container').innerHTML = 
+                    '<p>No se encontraron resultados que coincidan con los criterios de búsqueda.</p>';
+                return;
+            }
+            
+            let html = '';
+            
+            detections.forEach(detection => {
+                // Obtener datos del color dominante para mostrar
+                let colorStyle = '';
+                if (detection.dominant_color) {
+                    const [r, g, b] = detection.dominant_color;
+                    colorStyle = `background-color: rgb(${r}, ${g}, ${b})`;
+                }
+                
+                // Usar base64 si está disponible, de lo contrario usar la ruta de la imagen
+                let imgSrc;
+                if (detection.image_base64) {
+                    imgSrc = `data:image/jpeg;base64,${detection.image_base64}`;
+                } else {
+                    // Añadir timestamp para evitar caché
+                    const timestamp = new Date().getTime();
+                    imgSrc = `${detection.image_path}?t=${timestamp}`;
+                }
+                
+                const date = new Date(detection.timestamp).toLocaleString();
+                
+                html += `
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card">
+                            <div class="position-relative">
+                                <img src="${imgSrc}" class="card-img-top" alt="${detection.class}" 
+                                     onclick="showImageModal('${imgSrc}')"
+                                     onerror="this.onerror=null; this.src='/static/placeholder.jpg';">
+                                ${detection.track_id !== null ? `<span class="track-id-badge">ID: ${detection.track_id}</span>` : ''}
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${detection.class}</h5>
+                                <div class="d-flex mb-2">
+                                    <div class="color-sample me-2" style="width: 20px; height: 20px; ${colorStyle}; border: 1px solid #ddd; border-radius: 3px;"></div>
+                                    <small class="text-muted">Color dominante</small>
+                                </div>
+                                <p class="card-text">
+                                    <small class="text-muted">Confianza: ${(detection.confidence * 100).toFixed(1)}%</small><br>
+                                    <small class="text-muted">Fecha: ${date}</small><br>
+                                    <small class="text-muted">Tamaño: ${detection.object_size || 'N/A'} px²</small>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('forensic-gallery-container').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

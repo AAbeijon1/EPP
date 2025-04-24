@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargar Archivos - Sistema de Detección</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .upload-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .form-section h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0069d9;
+            border-color: #0062cc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-container">
+            <h2 class="text-center mb-4">Cargar Archivos para Detección</h2>
+            
+            <div class="form-section">
+                <h3>Cargar Modelo YOLOv8</h3>
+                <form action="/upload_model_simple" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="model" class="form-label">Selecciona un archivo de modelo (.pt)</label>
+                        <input class="form-control" type="file" id="model" name="model" accept=".pt" required>
+                        <div class="form-text">Solo se aceptan archivos con extensión .pt</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cargar Modelo</button>
+                </form>
+            </div>
+            
+            <div class="form-section">
+                <h3>Cargar Video</h3>
+                <form action="/upload_simple" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="video" class="form-label">Selecciona un archivo de video</label>
+                        <input class="form-control" type="file" id="video" name="video" accept="video/*" required>
+                        <div class="form-text">Formatos aceptados: mp4, avi, mov</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cargar Video</button>
+                </form>
+            </div>
+            
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-outline-secondary">Volver a la página principal</a>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

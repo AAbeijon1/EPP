@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Trayectorias</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .trajectory-container {
+            position: relative;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .trajectory-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .object-card {
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .object-card:hover {
+            transform: scale(1.02);
+        }
+        .object-card.selected {
+            border: 2px solid #0d6efd;
+        }
+        .object-image {
+            height: 150px;
+            object-fit: cover;
+        }
+        .clip-container {
+            margin-top: 20px;
+        }
+        .clip-video {
+            width: 100%;
+            max-height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .trajectory-controls {
+            margin-bottom: 20px;
+        }
+        .trajectory-legend {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .tab-content {
+            padding-top: 10px;
+        }
+        .navbar {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra de navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">PPE Detection App</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/trajectories">Análisis de Trayectorias</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 class="mb-4">Análisis de Trayectorias</h1>
+        
+        <!-- Pestañas de navegación -->
+        <ul class="nav nav-tabs" id="trajectoryTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-trajectories-tab" data-bs-toggle="tab" 
+                        data-bs-target="#all-trajectories" type="button" role="tab" 
+                        aria-controls="all-trajectories" aria-selected="true">
+                    Todas las Trayectorias
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="single-trajectory-tab" data-bs-toggle="tab" 
+                        data-bs-target="#single-trajectory" type="button" role="tab" 
+                        aria-controls="single-trajectory" aria-selected="false">
+                    Trayectoria Individual
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Contenido de las pestañas -->
+        <div class="tab-content" id="trajectoryTabsContent">
+            <!-- Pestaña de todas las trayectorias -->
+            <div class="tab-pane fade show active" id="all-trajectories" role="tabpanel" 
+                 aria-labelledby="all-trajectories-tab">
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- Controles de trayectorias -->
+                        <div class="card mb-4">
+                            <div class="card-header">Visualización de Todas las Trayectorias</div>
+                            <div class="card-body">
+                                <div class="trajectory-controls">
+                                    <button id="generate-all-trajectories-btn" class="btn btn-primary">
+                                        Generar Visualización
+                                    </button>
+                                    <button id="download-all-trajectory-btn" class="btn btn-outline-secondary ms-2" disabled>
+                                        Descargar Imagen
+                                    </button>
+                                </div>
+                                
+                                <div id="all-loading-spinner" class="loading-spinner">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando...</span>
+                                    </div>
+                                    <p>Generando visualización de trayectorias...</p>
+                                </div>
+                                
+                                <div id="all-trajectory-container" class="trajectory-container d-none">
+                                    <img id="all-trajectory-image" class="trajectory-image" src="/placeholder.svg" alt="Visualización de trayectorias">
+                                </div>
+                                
+                                <div id="all-trajectory-legend" class="trajectory-legend d-none">
+                                    <h5>Leyenda de Trayectorias</h5>
+                                    <div id="all-legend-items">
+                                        <!-- Los elementos de la leyenda se generarán dinámicamente -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Estadísticas de trayectorias -->
+                        <div class="card mb-4">
+                            <div class="card-header">Estadísticas de Movimiento</div>
+                            <div class="card-body">
+                                <div id="stats-loading" class="text-center d-none">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando...</span>
+                                    </div>
+                                    <p>Calculando estadísticas...</p>
+                                </div>
+                                
+                                <div id="stats-container">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">Objetos Detectados</h5>
+                                                    <h2 id="total-objects">0</h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">Tiempo Total Analizado</h5>
+                                                    <h2 id="total-time">0s</h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Distribución por Clase</h5>
+                                            <div id="class-distribution">
+                                                <!-- Se generará dinámicamente -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <!-- Filtros de trayectorias -->
+                        <div class="card mb-4">
+                            <div class="card-header">Filtros de Visualización</div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Clases a mostrar:</label>
+                                    <div id="class-filters">
+                                        <!-- Se generará dinámicamente -->
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="time-range" class="form-label">Rango de tiempo:</label>
+                                    <div id="time-range-container">
+                                        <input type="range" class="form-range" id="time-range-start" min="0" max="100" value="0">
+                                        <input type="range" class="form-range" id="time-range-end" min="0" max="100" value="100">
+                                        <div class="d-flex justify-content-between">
+                                            <span id="time-start-label">00:00:00</span>
+                                            <span id="time-end-label">00:00:00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="trajectory-thickness" class="form-label">Grosor de líneas:</label>
+                                    <input type="range" class="form-range" id="trajectory-thickness" min="1" max="10" value="2">
+                                </div>
+                                
+                                <button id="apply-filters-btn" class="btn btn-primary">Aplicar Filtros</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pestaña de trayectoria individual -->
+            <div class="tab-pane fade" id="single-trajectory" role="tabpanel" 
+                 aria-labelledby="single-trajectory-tab">
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- Visualización de trayectoria individual -->
+                        <div class="card mb-4">
+                            <div class="card-header">Trayectoria del Objeto Seleccionado</div>
+                            <div class="card-body">
+                                <div id="single-loading-spinner" class="loading-spinner">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando...</span>
+                                    </div>
+                                    <p>Generando trayectoria individual...</p>
+                                </div>
+                                
+                                <div id="single-trajectory-container" class="trajectory-container d-none">
+                                    <img id="single-trajectory-image" class="trajectory-image" src="/placeholder.svg" alt="Trayectoria individual">
+                                </div>
+                                
+                                <div class="mt-3 d-none" id="single-trajectory-controls">
+                                    <button id="download-single-trajectory-btn" class="btn btn-outline-primary">
+                                        Descargar Imagen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Clip de objeto seleccionado -->
+                        <div class="card mb-4 d-none" id="clip-card">
+                            <div class="card-header">Clip del Objeto Seleccionado</div>
+                            <div class="card-body">
+                                <div id="clip-loading" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando...</span>
+                                    </div>
+                                    <p>Generando clip de video...</p>
+                                </div>
+                                
+                                <div id="clip-container" class="clip-container d-none">
+                                    <video id="object-clip" class="clip-video" controls>
+                                        <source src="/placeholder.svg" type="video/mp4">
+                                        Tu navegador no soporta la reproducción de videos.
+                                    </video>
+                                </div>
+                                
+                                <div class="mt-3 d-none" id="clip-controls">
+                                    <button id="download-clip-btn" class="btn btn-outline-primary">
+                                        Descargar Clip
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <!-- Lista de objetos detectados -->
+                        <div class="card">
+                            <div class="card-header">Objetos Detectados</div>
+                            <div class="card-body">
+                                <div class="input-group mb-3">
+                                    <input type="text" id="object-search" class="form-control" placeholder="Buscar por clase o ID">
+                                    <button class="btn btn-outline-secondary" type="button" id="search-btn">Buscar</button>
+                                </div>
+                                
+                                <div id="objects-container">
+                                    <p>No hay objetos disponibles. Ejecuta la detección primero.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Detalles del objeto seleccionado -->
+                        <div class="card mt-4 d-none" id="object-details-card">
+                            <div class="card-header">Detalles del Objeto</div>
+                            <div class="card-body" id="object-details-container">
+                                <!-- Se generará dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let allObjects = [];
+        let allTrajectoryImageUrl = null;
+        let singleTrajectoryImageUrl = null;
+        let selectedObjectId = null;
+        let objectClipUrl = null;
+        let availableClasses = [];
+        let timeRange = {start: 0, end: 100};
+        let videoStartTime = null;
+        let videoEndTime = null;
+        
+        // Elementos DOM - Pestaña de todas las trayectorias
+        const generateAllTrajectoriesBtn = document.getElementById('generate-all-trajectories-btn');
+        const downloadAllTrajectoryBtn = document.getElementById('download-all-trajectory-btn');
+        const allLoadingSpinner = document.getElementById('all-loading-spinner');
+        const allTrajectoryContainer = document.getElementById('all-trajectory-container');
+        const allTrajectoryImage = document.getElementById('all-trajectory-image');
+        const allTrajectoryLegend = document.getElementById('all-trajectory-legend');
+        const allLegendItems = document.getElementById('all-legend-items');
+        const classFilters = document.getElementById('class-filters');
+        const timeRangeStart = document.getElementById('time-range-start');
+        const timeRangeEnd = document.getElementById('time-range-end');
+        const timeStartLabel = document.getElementById('time-start-label');
+        const timeEndLabel = document.getElementById('time-end-label');
+        const trajectoryThickness = document.getElementById('trajectory-thickness');
+        const applyFiltersBtn = document.getElementById('apply-filters-btn');
+        const totalObjects = document.getElementById('total-objects');
+        const totalTime = document.getElementById('total-time');
+        const classDistribution = document.getElementById('class-distribution');
+        
+        // Elementos DOM - Pestaña de trayectoria individual
+        const objectsContainer = document.getElementById('objects-container');
+        const objectSearch = document.getElementById('object-search');
+        const searchBtn = document.getElementById('search-btn');
+        const singleLoadingSpinner = document.getElementById('single-loading-spinner');
+        const singleTrajectoryContainer = document.getElementById('single-trajectory-container');
+        const singleTrajectoryImage = document.getElementById('single-trajectory-image');
+        const singleTrajectoryControls = document.getElementById('single-trajectory-controls');
+        const downloadSingleTrajectoryBtn = document.getElementById('download-single-trajectory-btn');
+        const clipCard = document.getElementById('clip-card');
+        const clipLoading = document.getElementById('clip-loading');
+        const clipContainer = document.getElementById('clip-container');
+        const objectClip = document.getElementById('object-clip');
+        const clipControls = document.getElementById('clip-controls');
+        const downloadClipBtn = document.getElementById('download-clip-btn');
+        const objectDetailsCard = document.getElementById('object-details-card');
+        const objectDetailsContainer = document.getElementById('object-details-container');
+        
+        // Colores para la leyenda (deben coincidir con los del backend)
+        const colors = [
+            '#FF0000', // Rojo
+            '#00FF00', // Verde
+            '#0000FF', // Azul
+            '#FFFF00', // Amarillo
+            '#FF00FF', // Magenta
+            '#00FFFF', // Cian
+            '#FF8000', // Naranja
+            '#8000FF', // Púrpura
+            '#0080FF', // Azul claro
+            '#80FF00'  // Verde claro
+        ];
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cargar objetos detectados al iniciar
+            loadDetectedObjects();
+            
+            // Configurar eventos - Pestaña de todas las trayectorias
+            generateAllTrajectoriesBtn.addEventListener('click', generateAllTrajectories);
+            downloadAllTrajectoryBtn.addEventListener('click', () => downloadTrajectoryImage(allTrajectoryImageUrl, 'todas-trayectorias.jpg'));
+            applyFiltersBtn.addEventListener('click', applyTrajectoryFilters);
+            
+            // Configurar eventos - Pestaña de trayectoria individual
+            searchBtn.addEventListener('click', searchObjects);
+            downloadSingleTrajectoryBtn.addEventListener('click', () => downloadTrajectoryImage(singleTrajectoryImageUrl, 'trayectoria-individual.jpg'));
+            downloadClipBtn.addEventListener('click', downloadObjectClip);
+            
+            // Búsqueda en tiempo real
+            objectSearch.addEventListener('input', searchObjects);
+            
+            // Actualizar etiquetas de tiempo
+            timeRangeStart.addEventListener('input', updateTimeLabels);
+            timeRangeEnd.addEventListener('input', updateTimeLabels);
+            
+            // Cambio de pestañas
+            document.getElementById('single-trajectory-tab').addEventListener('click', function() {
+                if (selectedObjectId === null) {
+                    singleLoadingSpinner.style.display = 'none';
+                }
+            });
+        });
+        
+        // Función para cargar objetos detectados
+        function loadDetectedObjects() {
+            fetch('/search_detections?class=')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.detections && data.detections.length > 0) {
+                        // Filtrar solo detecciones con track_id
+                        const trackedObjects = data.detections.filter(d => d.track_id !== null && d.track_id !== undefined);
+                        
+                        if (trackedObjects.length === 0) {
+                            objectsContainer.innerHTML = '<p>No se encontraron objetos con seguimiento.</p>';
+                            return;
+                        }
+                        
+                        // Extraer clases únicas
+                        availableClasses = [...new Set(trackedObjects.map(d => d.class))];
+                        
+                        // Generar filtros de clase
+                        generateClassFilters(availableClasses);
+                        
+                        // Extraer tiempos de video
+                        const timestamps = trackedObjects.map(d => d.timestamp);
+                        videoStartTime = Math.min(...timestamps);
+                        videoEndTime = Math.max(...timestamps);
+                        
+                        // Actualizar etiquetas de tiempo
+                        updateTimeLabels();
+                        
+                        // Agrupar por track_id
+                        const objectsByTrackId = {};
+                        trackedObjects.forEach(detection => {
+                            const trackId = detection.track_id;
+                            if (!objectsByTrackId[trackId]) {
+                                objectsByTrackId[trackId] = {
+                                    id: trackId,
+                                    class: detection.class,
+                                    detections: []
+                                };
+                            }
+                            objectsByTrackId[trackId].detections.push(detection);
+                        });
+                        
+                        // Convertir a array
+                        allObjects = Object.values(objectsByTrackId);
+                        
+                        // Actualizar estadísticas
+                        updateStatistics(allObjects);
+                        
+                        // Mostrar objetos
+                        displayObjects(allObjects);
+                    } else {
+                        objectsContainer.innerHTML = '<p>No hay objetos disponibles. Ejecuta la detección primero.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al cargar objetos:', error);
+                    objectsContainer.innerHTML = '<p class="text-danger">Error al cargar objetos detectados.</p>';
+                });
+        }
+        
+        // Función para generar filtros de clase
+        function generateClassFilters(classes) {
+            let html = '';
+            
+            classes.forEach(className => {
+                html += `
+                    <div class="form-check">
+                        <input class="form-check-input class-filter" type="checkbox" value="${className}" id="filter-${className}" checked>
+                        <label class="form-check-label" for="filter-${className}">
+                            ${className}
+                        </label>
+                    </div>
+                `;
+            });
+            
+            classFilters.innerHTML = html;
+        }
+        
+        // Función para actualizar etiquetas de tiempo
+        function updateTimeLabels() {
+            if (videoStartTime === null || videoEndTime === null) return;
+            
+            const startPercent = parseInt(timeRangeStart.value);
+            const endPercent = parseInt(timeRangeEnd.value);
+            
+            // Asegurar que el final no sea menor que el inicio
+            if (endPercent < startPercent) {
+                timeRangeEnd.value = startPercent;
+                return updateTimeLabels();
+            }
+            
+            // Calcular tiempos reales
+            const timeRange = videoEndTime - videoStartTime;
+            const startTime = videoStartTime + (timeRange * startPercent / 100);
+            const endTime = videoStartTime + (timeRange * endPercent / 100);
+            
+            // Actualizar etiquetas
+            timeStartLabel.textContent = formatTimestamp(startTime);
+            timeEndLabel.textContent = formatTimestamp(endTime);
+            
+            // Actualizar variable global
+            timeRange = {
+                start: startPercent,
+                end: endPercent
+            };
+        }
+        
+        // Función para formatear timestamp
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp * 1000);
+            const hours = date.getUTCHours().toString().padStart(2, '0');
+            const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+            const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        }
+        
+        // Función para actualizar estadísticas
+        function updateStatistics(objects) {
+            // Total de objetos
+            totalObjects.textContent = objects.length;
+            
+            // Tiempo total
+            if (videoStartTime !== null && videoEndTime !== null) {
+                const totalSeconds = videoEndTime - videoStartTime;
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = Math.floor(totalSeconds % 60);
+                totalTime.textContent = `${minutes}m ${seconds}s`;
+            }
+            
+            // Distribución por clase
+            const classCounts = {};
+            objects.forEach(obj => {
+                if (!classCounts[obj.class]) {
+                    classCounts[obj.class] = 0;
+                }
+                classCounts[obj.class]++;
+            });
+            
+            let distributionHtml = '<div class="row">';
+            Object.entries(classCounts).forEach(([className, count]) => {
+                const percentage = Math.round((count / objects.length) * 100);
+                distributionHtml += `
+                    <div class="col-md-6 mb-2">
+                        <div class="card">
+                            <div class="card-body p-2">
+                                <h6 class="card-title">${className}</h6>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width: ${percentage}%;" 
+                                         aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">
+                                        ${count} (${percentage}%)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            distributionHtml += '</div>';
+            
+            classDistribution.innerHTML = distributionHtml;
+        }
+        
+        // Función para mostrar objetos
+        function displayObjects(objects) {
+            if (objects.length === 0) {
+                objectsContainer.innerHTML = '<p>No se encontraron objetos que coincidan con la búsqueda.</p>';
+                return;
+            }
+            
+            let html = '<div class="row">';
+            
+            objects.forEach(object => {
+                // Usar la primera detección para la imagen
+                const firstDetection = object.detections[0];
+                let imgSrc;
+                
+                if (firstDetection.image_base64) {
+                    imgSrc = `data:image/jpeg;base64,${firstDetection.image_base64}`;
+                } else if (firstDetection.image_path) {
+                    // Añadir timestamp para evitar caché
+                    const timestamp = new Date().getTime();
+                    imgSrc = `${firstDetection.image_path}?t=${timestamp}`;
+                } else {
+                    imgSrc = '/static/placeholder.jpg';
+                }
+                
+                const isSelected = selectedObjectId === object.id;
+                
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card object-card ${isSelected ? 'selected' : ''}" data-id="${object.id}">
+                            <img src="${imgSrc}" class="card-img-top object-image" alt="${object.class}"
+                                 onerror="this.onerror=null; this.src='/static/placeholder.jpg';">
+                            <div class="card-body">
+                                <h5 class="card-title">${object.class}</h5>
+                                <p class="card-text">ID: ${object.id}<br>Detecciones: ${object.detections.length}</p>
+                                <button class="btn btn-sm btn-primary select-object-btn" data-id="${object.id}">
+                                    Ver Trayectoria
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            objectsContainer.innerHTML = html;
+            
+            // Añadir event listeners a los botones
+            document.querySelectorAll('.select-object-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const objectId = parseInt(this.getAttribute('data-id'));
+                    selectObject(objectId);
+                });
+            });
+            
+            // También permitir seleccionar haciendo clic en la tarjeta
+            document.querySelectorAll('.object-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // Evitar activación si se hizo clic en el botón
+                    if (!e.target.classList.contains('select-object-btn')) {
+                        const objectId = parseInt(this.getAttribute('data-id'));
+                        selectObject(objectId);
+                    }
+                });
+            });
+        }
+        
+        // Función para buscar objetos
+        function searchObjects() {
+            const searchTerm = objectSearch.value.trim().toLowerCase();
+            
+            if (!searchTerm) {
+                displayObjects(allObjects);
+                return;
+            }
+            
+            // Filtrar objetos por clase o ID
+            const filteredObjects = allObjects.filter(object => 
+                object.class.toLowerCase().includes(searchTerm) || 
+                object.id.toString().includes(searchTerm)
+            );
+            
+            displayObjects(filteredObjects);
+        }
+        
+        // Función para seleccionar un objeto
+        function selectObject(objectId) {
+            selectedObjectId = objectId;
+            
+            // Actualizar UI para mostrar el objeto seleccionado
+            document.querySelectorAll('.object-card').forEach(card => {
+                const cardId = parseInt(card.getAttribute('data-id'));
+                if (cardId === objectId) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+            
+            // Mostrar detalles del objeto
+            showObjectDetails(objectId);
+            
+            // Generar trayectoria individual
+            generateSingleTrajectory(objectId);
+            
+            // Mostrar el clip del objeto
+            generateObjectClip(objectId);
+            
+            // Cambiar a la pestaña de trayectoria individual si no está activa
+            const singleTrajectoryTab = document.getElementById('single-trajectory-tab');
+            if (!singleTrajectoryTab.classList.contains('active')) {
+                singleTrajectoryTab.click();
+            }
+        }
+        
+        // Función para mostrar detalles del objeto
+        function showObjectDetails(objectId) {
+            const object = allObjects.find(obj => obj.id === objectId);
+            
+            if (!object) {
+                objectDetailsCard.classList.add('d-none');
+                return;
+            }
+            
+            // Mostrar tarjeta de detalles
+            objectDetailsCard.classList.remove('d-none');
+            
+            // Calcular estadísticas
+            const firstDetection = object.detections[0];
+            const lastDetection = object.detections[object.detections.length - 1];
+            const duration = lastDetection.timestamp - firstDetection.timestamp;
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            
+            // Generar HTML de detalles
+            let detailsHtml = `
+                <div class="mb-3">
+                    <h5>Información General</h5>
+                    <p><strong>Clase:</strong> ${object.class}</p>
+                    <p><strong>ID de Seguimiento:</strong> ${object.id}</p>
+                    <p><strong>Número de Detecciones:</strong> ${object.detections.length}</p>
+                    <p><strong>Duración en Video:</strong> ${minutes}m ${seconds}s</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h5>Primera Aparición</h5>
+                    <p><strong>Tiempo:</strong> ${formatTimestamp(firstDetection.timestamp)}</p>
+                    <p><strong>Confianza:</strong> ${(firstDetection.confidence * 100).toFixed(1)}%</p>
+                </div>
+                
+                <div>
+                    <h5>Última Aparición</h5>
+                    <p><strong>Tiempo:</strong> ${formatTimestamp(lastDetection.timestamp)}</p>
+                    <p><strong>Confianza:</strong> ${(lastDetection.confidence * 100).toFixed(1)}%</p>
+                </div>
+            `;
+            
+            objectDetailsContainer.innerHTML = detailsHtml;
+        }
+        
+        // Función para generar todas las trayectorias
+        function generateAllTrajectories() {
+            // Mostrar spinner de carga
+            allLoadingSpinner.style.display = 'block';
+            allTrajectoryContainer.classList.add('d-none');
+            allTrajectoryLegend.classList.add('d-none');
+            downloadAllTrajectoryBtn.disabled = true;
+            
+            // Obtener todas las detecciones
+            fetch('/search_detections?class=')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.detections || data.detections.length === 0) {
+                        alert('No hay detecciones disponibles para analizar.');
+                        allLoadingSpinner.style.display = 'none';
+                        return;
+                    }
+                    
+                    // Enviar detecciones al backend para análisis
+                    return fetch('/trajectories/analyze_all', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            detections: data.detections,
+                            base_dir: window.location.origin
+                        })
+                    });
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Mostrar imagen de trayectorias
+                        allTrajectoryImageUrl = result.trajectory_image;
+                        
+                        // Añadir timestamp para evitar caché
+                        const timestamp = new Date().getTime();
+                        allTrajectoryImage.src = `${allTrajectoryImageUrl}?t=${timestamp}`;
+                        
+                        allTrajectoryContainer.classList.remove('d-none');
+                        downloadAllTrajectoryBtn.disabled = false;
+                        
+                        // Generar leyenda
+                        generateLegend(result.trajectory_data);
+                    } else {
+                        alert('Error al generar trayectorias: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al generar trayectorias. Por favor, inténtalo de nuevo.');
+                })
+                .finally(() => {
+                    allLoadingSpinner.style.display = 'none';
+                });
+        }
+        
+        // Función para aplicar filtros a las trayectorias
+        function applyTrajectoryFilters() {
+            // Obtener clases seleccionadas
+            const selectedClasses = Array.from(document.querySelectorAll('.class-filter:checked'))
+                .map(checkbox => checkbox.value);
+            
+            // Obtener rango de tiempo
+            const startPercent = parseInt(timeRangeStart.value);
+            const endPercent = parseInt(timeRangeEnd.value);
+            
+            // Obtener grosor de línea
+            const lineThickness = parseInt(trajectoryThickness.value);
+            
+            // Mostrar spinner de carga
+            allLoadingSpinner.style.display = 'block';
+            allTrajectoryContainer.classList.add('d-none');
+            
+            // Obtener todas las detecciones
+            fetch('/search_detections?class=')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.detections || data.detections.length === 0) {
+                        alert('No hay detecciones disponibles para analizar.');
+                        allLoadingSpinner.style.display = 'none';
+                        return;
+                    }
+                    
+                    // Calcular tiempos reales
+                    const timestamps = data.detections.map(d => d.timestamp);
+                    const minTime = Math.min(...timestamps);
+                    const maxTime = Math.max(...timestamps);
+                    const timeRange = maxTime - minTime;
+                    
+                    const startTime = minTime + (timeRange * startPercent / 100);
+                    const endTime = minTime + (timeRange * endPercent / 100);
+                    
+                    // Enviar detecciones al backend para análisis con filtros
+                    return fetch('/trajectories/analyze_filtered', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            detections: data.detections,
+                            classes: selectedClasses,
+                            start_time: startTime,
+                            end_time: endTime,
+                            line_thickness: lineThickness,
+                            base_dir: window.location.origin
+                        })
+                    });
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Mostrar imagen de trayectorias
+                        allTrajectoryImageUrl = result.trajectory_image;
+                        
+                        // Añadir timestamp para evitar caché
+                        const timestamp = new Date().getTime();
+                        allTrajectoryImage.src = `${allTrajectoryImageUrl}?t=${timestamp}`;
+                        
+                        allTrajectoryContainer.classList.remove('d-none');
+                        downloadAllTrajectoryBtn.disabled = false;
+                        
+                        // Generar leyenda
+                        generateLegend(result.trajectory_data);
+                    } else {
+                        alert('Error al aplicar filtros: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al aplicar filtros. Por favor, inténtalo de nuevo.');
+                })
+                .finally(() => {
+                    allLoadingSpinner.style.display = 'none';
+                });
+        }
+        
+        // Función para generar la leyenda
+        function generateLegend(trajectoryData) {
+            if (!trajectoryData || trajectoryData.length === 0) {
+                allTrajectoryLegend.classList.add('d-none');
+                return;
+            }
+            
+            let html = '';
+            
+            trajectoryData.forEach((data, index) => {
+                const colorIndex = index % colors.length;
+                const color = colors[colorIndex];
+                
+                html += `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: ${color};"></div>
+                        <div>
+                            <strong>${data.class}</strong> (ID: ${data.id})
+                            <small class="d-block text-muted">${data.count} detecciones</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            allLegendItems.innerHTML = html;
+            allTrajectoryLegend.classList.remove('d-none');
+        }
+        
+        // Función para generar trayectoria individual
+        function generateSingleTrajectory(objectId) {
+            // Mostrar spinner de carga
+            singleLoadingSpinner.style.display = 'block';
+            singleTrajectoryContainer.classList.add('d-none');
+            singleTrajectoryControls.classList.add('d-none');
+            
+            // Obtener todas las detecciones
+            fetch('/search_detections?class=')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.detections || data.detections.length === 0) {
+                        alert('No hay detecciones disponibles para analizar.');
+                        singleLoadingSpinner.style.display = 'none';
+                        return;
+                    }
+                    
+                    // Enviar detecciones al backend para análisis
+                    return fetch('/trajectories/analyze_single', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            detections: data.detections,
+                            object_id: objectId,
+                            base_dir: window.location.origin
+                        })
+                    });
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Mostrar imagen de trayectoria
+                        singleTrajectoryImageUrl = result.trajectory_image;
+                        
+                        // Añadir timestamp para evitar caché
+                        const timestamp = new Date().getTime();
+                        singleTrajectoryImage.src = `${singleTrajectoryImageUrl}?t=${timestamp}`;
+                        
+                        singleTrajectoryContainer.classList.remove('d-none');
+                        singleTrajectoryControls.classList.remove('d-none');
+                    } else {
+                        alert('Error al generar trayectoria individual: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al generar trayectoria individual. Por favor, inténtalo de nuevo.');
+                })
+                .finally(() => {
+                    singleLoadingSpinner.style.display = 'none';
+                });
+        }
+        
+        // Función para generar clip de objeto
+        function generateObjectClip(objectId) {
+            // Mostrar tarjeta de clip y spinner de carga
+            clipCard.classList.remove('d-none');
+            clipLoading.classList.remove('d-none');
+            clipContainer.classList.add('d-none');
+            clipControls.classList.add('d-none');
+            
+            // Obtener todas las detecciones
+            fetch('/search_detections?class=')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.detections || data.detections.length === 0) {
+                        alert('No hay detecciones disponibles para analizar.');
+                        clipLoading.classList.add('d-none');
+                        return;
+                    }
+                    
+                    // Enviar detecciones al backend para generar clip
+                    return fetch('/trajectories/generate_clip', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            detections: data.detections,
+                            object_id: objectId,
+                            base_dir: window.location.origin
+                        })
+                    });
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Mostrar clip de video
+                        objectClipUrl = result.clip_url;
+                        
+                        // Añadir timestamp para evitar caché
+                        const timestamp = new Date().getTime();
+                        objectClip.src = `${objectClipUrl}?t=${timestamp}`;
+                        objectClip.load();
+                        
+                        clipContainer.classList.remove('d-none');
+                        clipControls.classList.remove('d-none');
+                    } else {
+                        alert('Error al generar clip: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al generar clip. Por favor, inténtalo de nuevo.');
+                })
+                .finally(() => {
+                    clipLoading.classList.add('d-none');
+                });
+        }
+        
+        // Función para descargar imagen de trayectoria
+        function downloadTrajectoryImage(imageUrl, fileName) {
+            if (!imageUrl) return;
+            
+            const a = document.createElement('a');
+            a.href = imageUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        // Función para descargar clip de objeto
+        function downloadObjectClip() {
+            if (!objectClipUrl) return;
+            
+            const a = document.createElement('a');
+            a.href = objectClipUrl;
+            a.download = `objeto-${selectedObjectId}.mp4`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
